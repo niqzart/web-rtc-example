@@ -1,7 +1,11 @@
 import { version, validate } from "uuid";
 import { Server } from "socket.io";
 
-const io = new Server({});
+const io = new Server({
+  cors: {
+    origin: "*",
+  }
+});
 const PORT = parseInt(process.env.PORT) || 5000;
 
 // adapted & modified from: https://github.com/maks1mp/video-chat-webrtc
