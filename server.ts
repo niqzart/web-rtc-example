@@ -1,7 +1,6 @@
-import express from "express";
-const app = express();
-const port = 5000;
+import { Server }  from "socket.io";
 
-app.listen(port, () => {
-  return console.log(`Express is listening at http://localhost:${port}`);
-});
+const io = new Server({});
+const PORT = parseInt(process.env.PORT) || 5000;
+
+io.listen(PORT);
