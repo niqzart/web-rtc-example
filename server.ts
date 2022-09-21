@@ -3,7 +3,15 @@ import { Server } from "socket.io";
 
 const io = new Server({
   cors: {
-    origin: "*",
+    origin: [
+      "http://localhost:3000",
+      "https://xieffect.ru",
+      "https://ap.xieffect.ru",
+      "https://app.xieffect.ru",
+      "https://front.xieffect.ru",
+      "https://xieffect.netlify.app",
+    ],
+    credentials: true,
   }
 });
 const PORT = parseInt(process.env.PORT) || 5000;
