@@ -1,4 +1,3 @@
-import { version, validate } from "uuid";
 import { Server } from "socket.io";
 
 const io = new Server({
@@ -21,7 +20,6 @@ const PORT = parseInt(process.env.PORT) || 5000;
 const ACTIONS = {
   JOIN: "join",
   LEAVE: "leave",
-  SHARE_ROOMS: "share-rooms",
   ADD_PEER: "add-peer",
   REMOVE_PEER: "remove-peer",
   RELAY_SDP: "relay-sdp",
@@ -30,27 +28,14 @@ const ACTIONS = {
   SESSION_DESCRIPTION: "session-description"
 };
 
-function getClientRooms() {
-  const { rooms } = io.sockets.adapter;
-
-  return Array.from(rooms.keys()).filter(roomID => validate(roomID) && version(roomID) === 4);
-}
-
-function shareRoomsInfo() {
-  io.emit(ACTIONS.SHARE_ROOMS, {
-    rooms: getClientRooms()
-  })
-}
+const roomID = "hey"
 
 io.on("connection", socket => {
-  shareRoomsInfo();
+  socket.on(ACTIONS.JOIN, () => {
+    const { rooms } = socket;
 
-  socket.on(ACTIONS.JOIN, config => {
-    const { room: roomID } = config;
-    const { rooms: joinedRooms } = socket;
-
-    if (Array.from(joinedRooms).includes(roomID)) {
-      return `Already joined to ${roomID}`;
+    if (Array.from(rooms).includes(roomID)) {
+      return "Already joined";
     }
 
     const clients = Array.from(io.sockets.adapter.rooms.get(roomID) || []);
@@ -61,40 +46,29 @@ io.on("connection", socket => {
         createOffer: false
       });
 
-      socket.emit(ACTIONS.ADD_PEER, {
+      io.to(roomID).except(clientID).emit(ACTIONS.ADD_PEER, {
         peerID: clientID,
         createOffer: true,
       });
     });
 
     socket.join(roomID);
-    shareRoomsInfo();
   });
 
   function leaveRoom() {
-    const { rooms } = socket;
+    const clients = Array.from(io.sockets.adapter.rooms.get(roomID) || []);
 
-    Array.from(rooms)
-      .filter(roomID => validate(roomID) && version(roomID) === 4)
-      .forEach(roomID => {
-
-        const clients = Array.from(io.sockets.adapter.rooms.get(roomID) || []);
-
-        clients
-          .forEach(clientID => {
-            io.to(clientID).emit(ACTIONS.REMOVE_PEER, {
-              peerID: socket.id,
-            });
-
-            socket.emit(ACTIONS.REMOVE_PEER, {
-              peerID: clientID,
-            });
-          });
-
-        socket.leave(roomID);
+    clients.forEach(clientID => {
+      io.to(clientID).emit(ACTIONS.REMOVE_PEER, {
+        peerID: socket.id,
       });
 
-    shareRoomsInfo();
+      io.to(roomID).except(clientID).emit(ACTIONS.REMOVE_PEER, {
+        peerID: clientID,
+      });
+    });
+
+    socket.leave(roomID);
   }
 
   socket.on(ACTIONS.LEAVE, leaveRoom);
